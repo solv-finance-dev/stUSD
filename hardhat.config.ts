@@ -69,6 +69,16 @@ const config: HardhatUserConfig = {
       accounts:
         process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
+    merlin_test: {
+      url: process.env.MERLIN_TEST_URL || `https://testnet-rpc.merlinchain.io`,
+      accounts:
+        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+    },
+    blast_test: {
+      url: process.env.BLAST_TEST_URL || `https://sepolia.blast.io`,
+      accounts:
+        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+    },
     mainnet: {
       url: process.env.GOERLI_URL || `https://mainnet.infura.io/v3/${process.env.INFURA_KEY}`,
       accounts:
@@ -99,8 +109,8 @@ const config: HardhatUserConfig = {
       accounts:
         process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
-    merlin_test: {
-      url: process.env.MERLIN_TEST_URL || `https://testnet-rpc.merlinchain.io`,
+    blast: {
+      url: process.env.BLAST_URL || `https://rpc.blast.io`,
       accounts:
         process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },

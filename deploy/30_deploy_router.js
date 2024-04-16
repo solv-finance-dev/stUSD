@@ -4,17 +4,20 @@ const gasTracker = require('./utils/gasTracker');
 module.exports = async ({ getNamedAccounts, deployments, network }) => {
 
   const { deployer } = await getNamedAccounts();
-  const gasPrice = await gasTracker.getGasPrice(network.name);
+  // const gasPrice = await gasTracker.getGasPrice(network.name);
 
   const governor = deployer;
   const market = {
     localhost: '0xdbb35Ba81Dcba6AeC3a28ec127da434A0069A950',
     dev_goerli: '0xdbb35Ba81Dcba6AeC3a28ec127da434A0069A950',
+    dev_sepolia: '0x109198Eb8BD3064Efa5d0711b505f59cFd77de18',
     goerli: '0x2266dc69c2FaCD493C43a52E7c2131f2dF509287',
+    sepolia: '0x91967806F47e2c6603C9617efd5cc91Bc2A7473E',
+    merlin_test: '0xA853A738d3D86e1cd24b79bdB16916F57e8F9886',
+    blast_test: '0xf4280ab5e1868ab3492afd02bF7692D5780baAeA',
     arb: '0x629aD7Bc14726e9cEA4FCb3A7b363D237bB5dBE8',
     mantle: '0x1210371F2E26a74827F250afDfdbE3091304a3b7',
     eth: '0x57bB6a8563a8e8478391C79F3F433C6BA077c567',
-    merlin_test: '0xA853A738d3D86e1cd24b79bdB16916F57e8F9886',
     sepolia: '0x91967806F47e2c6603C9617efd5cc91Bc2A7473E',
     merlin: '0x59Cf3db95bdF5C545877871c3863c9DBe6b0b7cf',
     bsc: '0xaE050694c137aD777611286C316E5FDda58242F3',
@@ -26,8 +29,7 @@ module.exports = async ({ getNamedAccounts, deployments, network }) => {
   const proxyName = contractName + 'Proxy';
 
   const versions = {
-    localhost: ['v1.1'],
-    dev_goerli: ['v1.1'],
+    localhost: [],
   }
 
   const upgrades = versions[network.name]?.map(v => {return firstImplName + '_' + v}) || []
@@ -38,7 +40,7 @@ module.exports = async ({ getNamedAccounts, deployments, network }) => {
     {
       contract: contractName,
       from: deployer,
-      gasPrice: gasPrice,
+      // gasPrice: gasPrice,
       log: true
     },
     {
