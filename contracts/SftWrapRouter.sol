@@ -15,6 +15,7 @@ import "./ISftWrapRouter.sol";
 
 contract SftWrapRouter is ISftWrapRouter, ReentrancyGuardUpgradeable, AdminControlUpgradeable, GovernorControlUpgradeable {
 
+    event Subscribe(bytes32 indexed poolId, address indexed subscriber, uint256 shareId, uint256 shareValue, address currency, uint256 currencyAmount);
     event CreateSubscription(bytes32 indexed poolId, address indexed subscriber, address sftWrappedToken, uint256 swtTokenAmount, address currency, uint256 currencyAmount);
     event CreateRedemption(bytes32 indexed poolId, address indexed redeemer, address indexed sftWrappedToken, uint256 redeemAmount, uint256 redemptionId);
     event CancelRedemption(bytes32 indexed poolId, address indexed owner, address indexed sftWrappedToken, uint256 redemptionId, uint256 cancelAmount);
@@ -188,6 +189,57 @@ contract SftWrapRouter is ISftWrapRouter, ReentrancyGuardUpgradeable, AdminContr
         ERC20TransferHelper.doTransferOut(sftWrappedToken, payable(msg.sender), shareValue_);
 
         emit CreateSubscription(poolId_, msg.sender, sftWrappedToken, shareValue_, poolInfo.currency, currencyAmount_);
+    }
+
+    function createSubscriptionWithNativeToken(bytes32 poolId_) external payable virtual nonReentrant returns (uint256 shareValue_) {
+        PoolInfo memory poolInfo = IOpenFundMarket(openFundMarket).poolInfos(poolId_);
+        uint256 currencyAmount = _wrapNativeToken(poolInfo.currency, msg.value);
+
+        IERC3525 openFundShare = IERC3525(poolInfo.poolSFTInfo.openFundShare);
+        uint256 openFundShareSlot = poolInfo.poolSFTInfo.openFundShareSlot;
+
+        ERC20TransferHelper.doApprove(poolInfo.currency, openFundMarket, currencyAmount);
+        shareValue_ = IOpenFundMarket(openFundMarket).subscribe(poolId_, currencyAmount, 0, uint64(block.timestamp + 300));
+
+        uint256 shareCount = openFundShare.balanceOf(address(this));
+        uint256 shareId = openFundShare.tokenOfOwnerByIndex(address(this), shareCount - 1);
+        require(openFundShare.slotOf(shareId) == openFundShareSlot, "SftWrapRouter: incorrect share slot");
+        require(openFundShare.balanceOf(shareId) == shareValue_, "SftWrapRouter: incorrect share value");
+
+        address sftWrappedToken = SftWrappedTokenFactory(sftWrappedTokenFactory).sftWrappedTokens(address(openFundShare), openFundShareSlot);
+        require(sftWrappedToken != address(0), "SftWrapRouter: sft wrapped token not created");
+
+        ERC3525TransferHelper.doSafeTransferOut(address(openFundShare), sftWrappedToken, shareId);
+        ERC20TransferHelper.doTransferOut(sftWrappedToken, payable(msg.sender), shareValue_);
+
+        emit CreateSubscription(poolId_, msg.sender, sftWrappedToken, shareValue_, poolInfo.currency, currencyAmount);
+    }
+
+    function subscribeWithNativeToken(bytes32 poolId_) external payable virtual nonReentrant returns (uint256 shareValue_) {
+        PoolInfo memory poolInfo = IOpenFundMarket(openFundMarket).poolInfos(poolId_);
+        uint256 currencyAmount = _wrapNativeToken(poolInfo.currency, msg.value);
+
+        IERC3525 openFundShare = IERC3525(poolInfo.poolSFTInfo.openFundShare);
+        uint256 openFundShareSlot = poolInfo.poolSFTInfo.openFundShareSlot;
+
+        ERC20TransferHelper.doApprove(poolInfo.currency, openFundMarket, currencyAmount);
+        shareValue_ = IOpenFundMarket(openFundMarket).subscribe(poolId_, currencyAmount, 0, uint64(block.timestamp + 300));
+
+        uint256 shareCount = openFundShare.balanceOf(address(this));
+        uint256 shareId = openFundShare.tokenOfOwnerByIndex(address(this), shareCount - 1);
+        require(openFundShare.slotOf(shareId) == openFundShareSlot, "SftWrapRouter: incorrect share slot");
+        require(openFundShare.balanceOf(shareId) == shareValue_, "SftWrapRouter: incorrect share value");
+
+        ERC3525TransferHelper.doSafeTransferOut(address(openFundShare), msg.sender, shareId);
+        emit Subscribe(poolId_, msg.sender, shareId, shareValue_, poolInfo.currency, currencyAmount);
+    }
+
+    function _wrapNativeToken(address wnt, uint256 amount) internal virtual returns (uint256 wntAmount) {
+        uint256 currencyBalanceBefore = IERC20(wnt).balanceOf(address(this));
+        (bool success, ) = wnt.call{value: amount}(abi.encodeWithSignature("deposit()"));
+        require(success, "SftWrapRouter: wrap native token failed");
+        uint256 currencyBalanceAfter = IERC20(wnt).balanceOf(address(this));
+        wntAmount = currencyBalanceAfter - currencyBalanceBefore;
     }
 
     function createRedemption(bytes32 poolId_, uint256 redeemAmount_) external virtual nonReentrant returns (uint256 redemptionId_) {
